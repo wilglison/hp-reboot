@@ -5,7 +5,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import os
-#import telegram
+import telegram
+import asyncio
 
 LOGIN = os.environ.get('LOGIN')
 PASSWORD = os.environ.get('PASSWORD')
@@ -34,11 +35,11 @@ def nivel_tooner(ip_print):
     pg_restantes=WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, xpath)))
     return ip_print+" "+pg_restantes.text
 
-def envia_mensagem(mensagem):
+async def envia_mensagem(mensagem):
     try:
-        bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
-        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=mensagem)
-        bot.close()
+        bot = telegram.Bot(TELEGRAM_BOT_TOKEN)
+        async with bot:
+            await bot.send_message(text=mensagem, chat_id=TELEGRAM_CHAT_ID)
     except Exception as e:
         print(f"Erro ao enviar mensagem: {str(e)}")
         return False
@@ -53,6 +54,4 @@ for ip_print in IP_PRINTS:
 
 driver.quit()
 print(saida)
-#envia_mensagem(saida)
-
-
+asyncio.run(envia_mensagem(saida))
