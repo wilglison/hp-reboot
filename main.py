@@ -7,36 +7,52 @@ from webdriver_manager.chrome import ChromeDriverManager
 import os
 import telegram
 import asyncio
+import logging
 
-LOGIN = os.environ.get('LOGIN')
-PASSWORD = os.environ.get('PASSWORD')
-IP_PRINTS = os.environ.get('IP_PRINTS').split(",")
-TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
-TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
-niveis_tooner=[]
-saida="Nível de tooner das impressoras:\n"
+logging.basicConfig(filename='hp-boot.log', level=logging.INFO)
+LOGIN = os.environ.get("LOGIN")
+PASSWORD = os.environ.get("PASSWORD")
+IP_PRINTS = os.environ.get("IP_PRINTS").split(",")
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+#niveis_tooner = []
 
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument("--ignore-certificate-errors")
-chrome_options.add_argument('--headless')
-chrome_options.add_argument('--disable-gpu')
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--disable-gpu")
+driver = webdriver.Chrome(
+    service=Service(ChromeDriverManager().install()), options=chrome_options
+)
 
 def reinicia(ip_print):
     driver.get(f"https://{LOGIN}:{PASSWORD}@{ip_print}/#hId-pgPowerCycle")
-    WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, '//input[@type="button"]'))).click()
+    WebDriverWait(driver, 3).until(
+        EC.presence_of_element_located((By.XPATH, '//input[@type="button"]'))
+    ).click()
     driver.find_element(By.CLASS_NAME, "gui-cmd-bar-btn-power_cycle").click()
     driver.implicitly_wait(3)
-    driver.find_element(By.XPATH, "//button[@class='gui-action-btn' and text()='Sim']").click()
+    driver.find_element(
+        By.XPATH, "//button[@class='gui-action-btn' and text()='Sim']"
+    ).click()
     driver.implicitly_wait(3)
 
 def nivel_tooner(ip_print):
     driver.get(f"https://{ip_print}/#hId-pgConsumables")
-    xpath_nivel="/html/body/div[1]/div[5]/div[1]/div[2]/form/div[1]/div[2]/div[1]/div/table/tbody/tr[8]/td[2]"
-    xpath_boot="/html/body/div[1]/div[5]/div[1]/div[2]/form/div[1]/div[2]/div[1]/div/table/tbody/tr[4]/td[2]"
-    pg_restantes=WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, xpath_nivel)))
-    ultima_boot=WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, xpath_boot)))
-    return [ip_print,pg_restantes.text,ultima_boot.text]
+    saida=[]
+    xpath_nivel = "/html/body/div[1]/div[5]/div[1]/div[2]/form/div[1]/div[2]/div[1]/div/table/tbody/tr[8]/td[2]"
+    xpath_ult = "/html/body/div[1]/div[5]/div[1]/div[2]/form/div[1]/div[2]/div[1]/div/table/tbody/tr[4]/td[2]"
+    xpath_instalacao = "/html/body/div[1]/div[5]/div[1]/div[2]/form/div[1]/div[2]/div[1]/div/table/tbody/tr[5]/td[2]"
+    saida.append(ip_print)
+    for xpath in [xpath_nivel, xpath_ult, xpath_instalacao]:
+        try:
+            saida.append(WebDriverWait(driver, 3).until(
+                EC.presence_of_element_located((By.XPATH, xpath))
+            ).text)
+        except Exception as e:
+            logging.error({str(e)})
+    return saida
+    #return [ip_print, pg_restantes.text, ultima_boot.text, toner_instalacao.text]
 
 async def envia_mensagem(mensagem):
     try:
@@ -44,23 +60,38 @@ async def envia_mensagem(mensagem):
         async with bot:
             await bot.send_message(text=mensagem, chat_id=TELEGRAM_CHAT_ID)
     except Exception as e:
-        print(f"Erro ao enviar mensagem: {str(e)}")
+        logging.error(f"Erro ao enviar mensagem: {str(e)}")
         return False
     return True
 
-for ip_print in IP_PRINTS:
-    try:
-        nivel=nivel_tooner(ip_print)
-        print(nivel)
-        #if int(nivel[1])<500:
-        niveis_tooner.append(nivel)
-        saida+=f"{nivel[0]} {nivel[1]} {nivel[2]}\n"
-        #reinicia(ip_print)
-    except Exception as e:
-        print(f"Erro ao acessar {ip_print}: {str(e)}")
+if __name__ == "__main__":
+    print("Iniciando...")   
+    saida = f"Ip Impr.\tEstimativa\tÚlt.util"#\tInst.Toner"
+    print(saida)
+    for ip_print in IP_PRINTS:
+        cont_erro = 0
+        try:
+            nivel = nivel_tooner(ip_print)
+            if nivel[1] == "> 8000 †":
+                nivel[1] = "8000"
+            print(f"{nivel[0]}\t{nivel[1]}\t\t{nivel[2]}\t{nivel[3]}")
+            saida += f"\n{nivel[0]}\t{nivel[1]}\t\t{nivel[2]}"
+            reinicia(ip_print)
+            logging.info(saida)
+        except Exception as e:
+            if cont_erro < 1:
+                os.sleep(1)
+                nivel = nivel_tooner(ip_print)
+                if nivel[1] == "> 8000 †":
+                    nivel[1] = "8000"
+                print(f"{nivel[0]}\t{nivel[1]}\t\t{nivel[2]}\t{nivel[3]}")
+                logging.info(saida)
 
-driver.quit()
+            cont_erro += 1
+            logging.error(f"Erro ao acessar {ip_print}: {str(e)}")
 
-print(saida)
-#if saida != "Nível de tooner das impressoras:\n":
-asyncio.run(envia_mensagem(saida))
+    driver.quit()
+    asyncio.run(envia_mensagem(saida))
+    #print(saida)
+   
+    
