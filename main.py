@@ -77,7 +77,7 @@ if __name__ == "__main__":
             nivel = nivel_tooner(ip_print)
             saida += nivel
             logging.info(nivel)
-            #reinicia(ip_print)
+            reinicia(ip_print)
         except Exception as e:
             if cont_erro < 1:
                 time.sleep(1)
