@@ -30,8 +30,9 @@ pip install -r requirements.txt
 
 ## Preencher o .env conforme .env-exemple
 
-## Executar
+## Executar no docker
 
 ```bash
-python main.py
+docker build -t hp-reboot .
+docker run -d --name hp-reboot --env-file .env hp-reboot
 ```

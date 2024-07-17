@@ -5,6 +5,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import os
+import time
 import telegram
 import asyncio
 import logging
@@ -15,7 +16,6 @@ PASSWORD = os.environ.get("PASSWORD")
 IP_PRINTS = os.environ.get("IP_PRINTS").split(",")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
-#niveis_tooner = []
 
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument("--ignore-certificate-errors")
@@ -44,13 +44,17 @@ def nivel_tooner(ip_print):
     xpath_ult = "/html/body/div[1]/div[5]/div[1]/div[2]/form/div[1]/div[2]/div[1]/div/table/tbody/tr[4]/td[2]"
     xpath_instalacao = "/html/body/div[1]/div[5]/div[1]/div[2]/form/div[1]/div[2]/div[1]/div/table/tbody/tr[5]/td[2]"
     saida.append(ip_print)
-    for xpath in [xpath_nivel, xpath_ult, xpath_instalacao]:
-        try:
-            saida.append(WebDriverWait(driver, 3).until(
-                EC.presence_of_element_located((By.XPATH, xpath))
-            ).text)
-        except Exception as e:
-            logging.error({str(e)})
+    #for xpath in [xpath_nivel, xpath_ult, xpath_instalacao]:
+    try:
+        saida.append(WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, xpath_nivel))).text)
+        if saida[1] == "> 8000 †":
+                saida[1] = "8000"
+        saida.append(WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, xpath_ult))).text)
+        saida.append(WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, xpath_instalacao))).text)
+    except Exception as e:
+        logging.error({str(e)})
+    
+    saida = f"\n{saida[0]}\t{saida[1]}\t\t{saida[2]}\t{saida[3]}"
     return saida
     #return [ip_print, pg_restantes.text, ultima_boot.text, toner_instalacao.text]
 
@@ -65,33 +69,26 @@ async def envia_mensagem(mensagem):
     return True
 
 if __name__ == "__main__":
-    print("Iniciando...")   
-    saida = f"Ip Impr.\tEstimativa\tÚlt.util"#\tInst.Toner"
-    print(saida)
+    logging.info("-----Iniciando-----")
+    saida = f"Ip Impr.\tEstimativa\tÚlt.util\tInst.Toner"
     for ip_print in IP_PRINTS:
         cont_erro = 0
         try:
             nivel = nivel_tooner(ip_print)
-            if nivel[1] == "> 8000 †":
-                nivel[1] = "8000"
-            print(f"{nivel[0]}\t{nivel[1]}\t\t{nivel[2]}\t{nivel[3]}")
-            saida += f"\n{nivel[0]}\t{nivel[1]}\t\t{nivel[2]}"
-            reinicia(ip_print)
-            logging.info(saida)
+            saida += nivel
+            logging.info(nivel)
+            #reinicia(ip_print)
         except Exception as e:
             if cont_erro < 1:
-                os.sleep(1)
+                time.sleep(1)
                 nivel = nivel_tooner(ip_print)
-                if nivel[1] == "> 8000 †":
-                    nivel[1] = "8000"
-                print(f"{nivel[0]}\t{nivel[1]}\t\t{nivel[2]}\t{nivel[3]}")
-                logging.info(saida)
+                saida += nivel
+                logging.info(nivel)
 
             cont_erro += 1
             logging.error(f"Erro ao acessar {ip_print}: {str(e)}")
 
     driver.quit()
     asyncio.run(envia_mensagem(saida))
-    #print(saida)
-   
+    print(saida)
     
