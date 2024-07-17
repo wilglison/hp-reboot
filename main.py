@@ -10,7 +10,7 @@ import telegram
 import asyncio
 import logging
 
-logging.basicConfig(filename='hp-boot.log', level=logging.INFO)
+logging.basicConfig(filename='hp-boot.log', level=logging.INFO, format="%(asctime)s :: %(levelname)s :: %(message)s")
 LOGIN = os.environ.get("LOGIN")
 PASSWORD = os.environ.get("PASSWORD")
 IP_PRINTS = os.environ.get("IP_PRINTS").split(",")
@@ -69,8 +69,7 @@ async def envia_mensagem(mensagem):
     return True
 
 if __name__ == "__main__":
-    logging.info("-----Iniciando-----")
-    saida = f"Ip Impr.\tEstimativa\tÚlt.util\tInst.Toner"
+    saida = f"\nIp Impr.\tEstimativa\tÚlt.util\tInst.Toner"
     for ip_print in IP_PRINTS:
         cont_erro = 0
         try:
@@ -90,5 +89,4 @@ if __name__ == "__main__":
 
     driver.quit()
     asyncio.run(envia_mensagem(saida))
-    print(saida)
-    
+    logging.info(saida)
