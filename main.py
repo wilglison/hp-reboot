@@ -14,6 +14,7 @@ logging.basicConfig(filename='hp-boot.log', level=logging.INFO, format="%(asctim
 LOGIN = os.environ.get("LOGIN")
 PASSWORD = os.environ.get("PASSWORD")
 IP_PRINTS = os.environ.get("IP_PRINTS").split(",")
+IP_PRINTS = os.environ.get("IP_PRINTS", "").split(",")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
@@ -76,7 +77,7 @@ if __name__ == "__main__":
             nivel = nivel_tooner(ip_print)
             saida += nivel
             logging.info(nivel)
-            reinicia(ip_print)
+            #reinicia(ip_print)
         except Exception as e:
             if cont_erro < 1:
                 time.sleep(1)

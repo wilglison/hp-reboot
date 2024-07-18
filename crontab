@@ -1,2 +1,3 @@
 # Run main.py at 3am every Saturday
-0 3 * * 6 python /app/main.py >> /var/log/cron.log 2>&1
+#0 3 * * 6 python /app/main.py >> /var/log/cron.log 2>&1
+25 17 * * * /usr/local/bin/python /app/main.py >> /var/log/cron.log 2>&1
